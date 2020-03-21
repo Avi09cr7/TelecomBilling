@@ -1,0 +1,523 @@
+/********************************************************************************************
+ *
+ * FILENAME : functions.cpp
+ *
+ * DESCRIPTION :
+ *
+ * AUTHOR : SARTHAK KALA, SARANSH SHARMA, SHREYA PRAJAPATI
+ * DATE : 2-2-2018
+ *
+ * COPYRIGHT :2007, ARICENT INC.
+ *
+ ******************************************************************************************/
+
+#include<iostream>
+#include<cstdlib>
+#include<cstring>
+#include<fstream>
+#include<header.h>
+
+#define NL_REMOVE(x) x[strlen(x)-1]='\0'
+using namespace std;
+
+user::user()
+{
+    strncpy(user_name,"INVALID",MAX_LEN_FOR_NAME) ;
+    strncpy(contact_no,"INVALID",MAX_LEN_FOR_CONTACT_NO) ;
+    connection_type = INVALID ;
+    plan_no = INVALID ;
+    balance = INVALID;               
+}
+user::user(char name[MAX_LEN_FOR_NAME] ,char tel_no[MAX_LEN_FOR_CONTACT_NO], int con_type , int pl_no)
+{
+	strcpy(user_name, name);
+	strcpy(contact_no, tel_no);
+	connection_type = con_type;
+	plan_no = pl_no;	
+}
+
+plan::plan()
+{
+    plan_no = INVALID ;
+    strcpy(plan_desc,"INVALID") ;       
+}
+
+bill::bill()
+{    
+    strcpy(contact_no,"INVALID") ;       
+    call_duration = 0 ;  
+}
+
+void user::get_data()
+{
+
+    std::cout<<"\nEnter your Name:" ;
+    fgets(user_name, MAX_LEN_FOR_NAME , stdin);
+    NL_REMOVE(user_name);   
+ 
+    std::cout<< "\nEnter your contact number : " ; 
+    fgets( contact_no, MAX_LEN_FOR_CONTACT_NO , stdin);
+    NL_REMOVE(contact_no);    
+
+    std::cout<<"\nConnection type (Prepaid -> 0 / Postpaid -> 1)" ;
+    std::cin>>connection_type; 
+    
+    std::cout<<"Enter the plan number" ;
+    std::cin>> plan_no;
+  
+    return;
+}
+
+void user::write_data()
+{	
+
+    user user_obj;    
+
+    std::fstream outfile;
+    outfile.open("../dat/user_data.txt" , std::fstream::out);
+    
+    user_obj.get_data();
+    
+    outfile.write((char *)&user_obj , sizeof(user_obj));
+    outfile.flush();
+    outfile.close();
+  
+    return;
+}
+
+void user::show_data()
+{
+    char ch;
+    cout<<"\nName : "<<user_name;
+    cout<<"\nContact Number : "<<contact_no;
+    cout<<"\nConnection Type : "<<connection_type;
+    cout<<"\nPlan_no : "<<plan_no;
+    cout<<"\n\nPress any key to continue";
+    cin>>ch;
+    return;
+}
+
+void user::show_object()
+{
+    user user_obj;
+
+    std::fstream infile;
+    infile.open("../dat/user_data.txt" , std::fstream::in);
+    infile.seekg(0,ios::beg);
+    infile.read((char*)&user_obj, sizeof(user_obj));
+
+    while(!infile.eof())
+    {
+	user_obj.show_data();
+	infile.read((char*)&user_obj , sizeof(user_obj));
+    }
+
+    infile.close();
+}
+
+int user::search_user( char tel_no[] )
+{
+    std::fstream infile;
+    user user_obj;
+    int pos = INVALID;    
+    infile.open("../dat/user_data.txt",ios::in);
+    infile.seekg(0,ios::beg);
+    infile.read( (char*)&user_obj, sizeof(user_obj));
+        
+
+    while(!infile.eof())
+    {
+        if(tel_no==contact_no)
+        {
+            pos = infile.tellg();   
+        }  
+                    
+        infile.read( (char*)&user_obj, sizeof(user_obj));
+    } 
+ 
+    infile.close();
+    return pos;   
+}
+
+void user::delete_data()
+{    
+    char tel_no[MAX_LEN_FOR_CONTACT_NO]; 
+    int pos = INVALID;
+    std::fstream infile, outfile;
+    int idx = INVALID;
+    user user_obj;
+     
+    std::cout<<"\nEnter the contact number to be deleted";
+    fgets(tel_no, MAX_LEN_FOR_CONTACT_NO,stdin); 
+    NL_REMOVE(tel_no);
+
+    pos = user_obj.search_user( tel_no );
+    if( pos == INVALID )
+    {     
+        cout<<"\n No such record present.";
+        return;
+    }
+
+     
+    outfile.open("../dat/tempfile.txt",ios::out);
+    infile.open("../dat/user_data.txt",ios::in);
+    infile.seekg(0,ios::beg);
+    infile.read((char*)&user_obj,sizeof(user_obj));
+    idx = infile.tellg();
+    
+    while (!infile.eof())
+    {
+        if(idx != pos)
+        {
+             outfile.write((char*)&user_obj, sizeof(user_obj));
+             infile.read( (char*)&user_obj, sizeof(user_obj));    
+             idx = infile.tellg();
+        }
+        else
+        {
+            infile.read((char*)&user_obj, sizeof(user_obj));
+            idx = infile.tellg();
+        }
+    }
+
+    remove("../dat/user_data.txt");
+    rename("../dat/tempfile.txt" , "../dat/user_data.txt");
+ 
+    return;       
+}
+
+void user::modify_data()
+{
+    char tel_no[MAX_LEN_FOR_CONTACT_NO];
+    std::fstream infile, outfile;    
+    int pos = INVALID;
+    int idx;
+    user user_obj;
+    char name[MAX_LEN_FOR_NAME];
+    int con_type;
+    int pl_no;
+
+    std::cout<<"\nEnter the contact number to be modified";
+    fgets(tel_no, MAX_LEN_FOR_CONTACT_NO,stdin); 
+    NL_REMOVE(tel_no);
+    
+    pos = search_user( tel_no );
+    if( pos == INVALID )
+    {    
+        cout<<"\n No such record present.";
+        return;
+    }
+
+    infile.open("../dat/user_data.txt" , ios::in ); 
+    outfile.open("../dat/tempfile.txt" , ios::out );
+    infile.seekg(0,ios::beg);
+    infile.read((char*)&user_obj , sizeof(user_obj));
+
+    while (!infile.eof())
+    {
+        if(idx != pos)
+        {
+             outfile.write((char*)&user_obj, sizeof(user_obj));
+             infile.read( (char*)&user_obj, sizeof(user_obj));
+             idx = infile.tellg();
+        }
+        else
+        {
+            infile.read((char*)&user_obj, sizeof(user_obj));    
+            idx = infile.tellg();
+
+	    std::cout<<"\n Enter the name : ";
+	    fgets(name, MAX_LEN_FOR_NAME,stdin);
+	    NL_REMOVE(name); 
+	    
+     	    std::cout<<"\n Enter the connection type : ";
+	    std::cin>>con_type;
+	    while(getchar()!='\n');	    
+
+	    std::cout<<"Enter the plan no : ";
+	    std::cin>>plan_no;
+            while(getchar()!='\n');
+            
+            user(name, tel_no, con_type, pl_no); 
+            outfile.write( (char*)&user_obj , sizeof(user_obj) );
+            outfile.flush();           
+        }
+    }
+  
+    remove("../dat/user_data.txt");
+    rename("../dat/tempfile.txt","../dat/user_data.txt");
+
+    outfile.close();
+    infile.close();
+}
+
+float user::read_balance(int pos)
+{
+    std::fstream infile;
+    user user_obj;
+    infile.open("../dat/user_data.txt" , ios::in);
+
+    infile.seekg(pos , ios::beg);
+    infile.read((char*)&user_obj , sizeof(user_obj));
+    
+    infile.close();
+    return user_obj.balance;    
+}
+
+int user::read_connection_type(int pos)
+{
+    std::fstream infile;
+    user user_obj;
+    infile.open("../dat/user_data.txt" , ios::in);
+
+    infile.seekg( pos , ios::beg );
+    infile.read( (char*)&user_obj , sizeof(user_obj));
+    
+    infile.close();
+    return user_obj.connection_type;    
+}
+
+int user::read_plan(int pos)
+{
+    std::fstream infile;
+    user user_obj;
+    infile.open("../dat/user_data.txt" , ios::in);
+
+    infile.seekg(pos , ios::beg);
+    infile.read((char*)&user_obj , sizeof(user_obj));
+    
+    infile.close();
+    return user_obj.plan_no;    
+}
+
+void user::update_balance( char tel_no[] , float balance )
+{
+    int pos =INVALID,
+        idx = INVALID ;
+    user user_obj;
+    std::fstream infile,outfile;    
+
+    pos=search_user(tel_no);
+    if( pos == INVALID )
+    {
+        cout<<"\n Record not found.";
+        return;
+    }
+        
+    infile.open("../dat/user_data.txt",ios::in);
+    outfile.open("../dat/tempfile.txt",ios::out);
+    infile.read( (char*)&user_obj , sizeof(user_obj) );
+    idx=infile.tellg();
+    
+    while(!infile.eof())
+    {   
+        if(pos==idx)
+        { 
+            user_obj.balance = balance;
+        }   
+        
+        outfile.write( (char*)&user_obj , sizeof(user_obj) );        
+	infile.read( (char*)&user_obj , sizeof(user_obj) );
+        idx = infile.tellg();
+    }
+
+	return;
+	      
+}
+
+void plan::show_plan()
+{
+    std::fstream infile;
+    plan plan_obj;
+    infile.open("../dat/plan_data.txt" , ios::in);
+    
+    infile.read((char*)&plan_obj , sizeof(plan_obj));
+    while(!infile.eof())
+    {
+	std::cout<<"\nPlan number is : " <<plan_no ;
+	std::cout<<"\nPlan description : " <<plan_desc;
+
+        infile.read((char*)&plan_obj , sizeof(plan_obj));
+    }
+
+    infile.close();
+}
+
+void plan::delete_plan()
+{
+    std::fstream infile , outfile;
+    plan plan_obj;
+    int plan_number;
+    outfile.open("../dat/tempfile.txt" , ios::out);
+    infile.open("../dat/plan_data.txt"  , ios::in);
+    
+    std::cout<<"\n Enter the plan number to be deleted : ";
+    std::cin>>plan_number;
+    while(getchar()!='\n');
+    
+    infile.read((char*)&plan_obj , sizeof(plan_obj));
+    while(!infile.eof())
+    {
+        if(plan_number != plan_no)
+        {
+            outfile.write((char*)&plan_obj, sizeof(plan_obj));
+            infile.read((char*)&plan_obj , sizeof(plan_obj));
+        }
+        outfile.flush();
+    }
+
+    remove("../dat/plan_data.txt");
+    rename("../dat/tempfile.txt" , "../dat/plan_data.txt");
+
+    infile.close();
+    outfile.close();
+}
+
+int plan::search_plan( int plan_no_mod )
+{       
+    std::fstream infile;
+    int pos = INVALID;
+    plan plan_obj;    
+    infile.open( "../dat/plan_data.txt" , ios::in );
+    infile.seekg( 0 , ios::beg );
+    infile.read( (char*)&plan_obj, sizeof(plan_obj) );
+        
+
+    while( !infile.eof() )
+    {
+        if( plan_no_mod==plan_obj.plan_no )
+        {
+            pos = infile.tellg();   
+        }  
+                    
+        infile.read( (char*)&plan_obj, sizeof(plan_obj) );
+    } 
+ 
+    infile.close();
+    return pos;   
+}
+
+void plan::modify_plan()
+{
+    int plan_no_mod = INVALID;
+    std::fstream infile, outfile;    
+    int pos = INVALID;
+    int idx;
+    plan plan_obj;
+
+    std::cout<<"\nEnter the plan number to be modified";
+    std::cin>>plan_no_mod; 
+    while(getchar()!='\n');
+
+    pos = search_plan( plan_no_mod );
+    if( pos == INVALID )
+    {    
+        cout<<"\n No such record present.";
+        return;
+    }
+
+    infile.open("../dat/plan_data.txt" , ios::in ); 
+    outfile.open("../dat/tempfile.txt" , ios::out );
+    infile.seekg(0,ios::beg);
+    infile.read((char*)&plan_obj , sizeof(plan_obj));
+    idx = infile.tellg();
+
+    while (!infile.eof())
+    {
+        if(idx != pos)
+        {
+             outfile.write( (char*)&plan_obj , sizeof(plan_obj) );
+             infile.read( (char*)&plan_obj, sizeof(plan_obj) );
+             idx = infile.tellg();
+        }
+        else
+        {
+            infile.read( (char*)&plan_obj, sizeof(plan_obj) );    
+            idx = infile.tellg();
+
+	    std::cout<<"\n Enter the plan description : ";
+	    fgets(plan_desc, MAX_LEN_FOR_PLAN_DESC, stdin); 
+            NL_REMOVE(plan_desc);
+
+            outfile.write( (char*)&plan_obj , sizeof(plan_obj) );
+            outfile.flush();           
+        }
+    }
+  
+    remove( "../dat/plan_data.txt" );
+    rename( "../dat/tempfile.txt", "../dat/plan_data.txt");
+     
+    infile.close();
+    outfile.close();
+
+    return;
+}
+
+float bill::place_call( int connection_type , int plan_no , float balance )
+{ 
+    int duration;
+    bill bill_obj;
+    std::cout<<"\n Enter the call duration (in minutes)" ;
+    std::cin>>duration; 
+    while(getchar()!='\n');
+
+    if(connection_type == POSTPAID)
+    {  
+        duration = -1 * duration;
+    }
+    switch(plan_no)
+    {
+         case 101:
+         	if(balance - (duration * 1) < 0)
+                    cout<< "\n This call cannot be completed" ;
+                else
+                    balance = balance - ( duration * 1 );
+                break;        
+
+         case 102:
+                if(balance - ( duration * 0.8) < 0)
+                    cout<< "\n This call cannot be completed" ;
+                else
+                    balance = balance - ( duration * 0.8);
+                break;   
+
+         case 103:
+                if(balance - ( duration * 0.5) < 0)
+                    cout<< "\n This call cannot be completed" ;
+                else
+                    balance = balance - ( duration * 0.5 );
+                break;
+
+         default:
+                cout<< "\n This plan does not exist... ";
+                break;
+      }
+    
+    return balance;
+
+}
+
+void bill::generate_bill( char tel_no[] )
+{
+    std::fstream infile;
+    user user_obj;
+    infile.open("../dat/user_data.txt" , ios::in);
+
+    infile.read((char*)&user_obj , sizeof(user_obj));
+    while(!infile.eof())
+    {
+        if(contact_no == tel_no)
+        {
+            if( user_obj.get_connection_type() == POSTPAID )
+                std::cout<<"\n Your total bill is : "<<get_balance() ;
+
+            else
+                std::cout<<"\n Your remaining balance is : "<<get_balance() ;
+        }
+
+        infile.read((char*)&user_obj , sizeof(user_obj));
+    }
+    
+    infile.close();
+    return;
+} 
